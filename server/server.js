@@ -1,15 +1,15 @@
 // server/server.js
-import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// утилиты / схемы / логика
+import dotenv from "dotenv";
+dotenv.config();
+
 import { validateOrThrow } from "./shared/validator.js";
 import { ensureSessionId } from "./shared/utils.js";
-import { normalizeRequest } from "./logic/normalize.js";
-import { dialogTurn } from "./logic/dialog.js";
+import { chatTurn } from "./logic/dialog.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,134 +18,133 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
-/**
- * Важно: сначала отдаем статику БЕЗ лимитера.
- * Иначе браузерные запросы к styles.css / script.js могут ловить 429.
- */
-app.use(express.static(path.join(__dirname, "..", "public")));
+// Память процесса для сессий (упрощённо для MVP)
+const sessions = new Map();
 
-/**
- * Лимит и обрезка длины — применяем ТОЛЬКО к /api/*
- */
-const apiLimiter = (req, res, next) => {
-  const ip =
-    req.headers["x-forwarded-for"]?.toString().split(",")[0] ||
-    req.socket.remoteAddress ||
-    "ip";
-  const now = Date.now();
-  apiLimiter._lastHit ??= new Map();
-  const prev = apiLimiter._lastHit.get(ip) || 0;
-  if (now - prev < 800) {
-    return res
-      .status(429)
-      .json({ error: "Too many requests. Try again shortly." });
-  }
-  apiLimiter._lastHit.set(ip, now);
-  next();
-};
+// --- Статика SPA ---
+const publicDir = path.resolve(__dirname, "../public");
+app.use(express.static(publicDir));
 
-const trimLongMessage = (req, _res, next) => {
-  if (
-    req.body?.message &&
-    typeof req.body.message === "string" &&
-    req.body.message.length > 4000
-  ) {
-    req.body.message = req.body.message.slice(0, 4000);
-  }
-  next();
-};
+// ====== API ======
 
-// Применяем ТОЛЬКО на /api/*
-app.use("/api", apiLimiter, trimLongMessage);
-
-// ===== In-memory сессии (MVP) =====
-const sessions = new Map(); // sessionId -> { subject, grade, style, level, normalized, history[], turn, mastery }
-
-// ===== /api/normalize =====
+// Нормализацию оставляем как была (если фронт когда-то её вызовет).
+// Но для варианта А она не используется.
 app.post("/api/normalize", async (req, res) => {
   try {
     validateOrThrow("TutorInput", req.body);
     const { subject, grade, style, level = "standard", query } = req.body;
+
     const sessionId = ensureSessionId(req.body.sessionId);
+    // Минимальная инициализация, чтобы совместимо жить с вариантом A:
+    const normalized = {
+      topic: String(query || ""),
+      goals: [],
+      constraints: [`grade:${grade}`, `style:${style}`],
+      context_stub: "",
+    };
 
-    // нормализация + контекст из topics
-    const { normalized } = await normalizeRequest({
-      subject,
-      grade,
-      style,
-      level,
-      query,
-    });
-
-    // создаём/обновляем сессию
+    // Создаём/обновляем сессию
     sessions.set(sessionId, {
-      subject,
-      grade,
-      style,
+      subject: subject || "general",
+      grade: Number.isFinite(+grade) ? +grade : 9,
+      style: style || "step_by_step",
       level,
       normalized,
-      history: [{ role: "user", content: String(query || "") }],
-      turn: 1,
+      history: [],
+      turn: 0,
       mastery: 0,
     });
 
-    const payload = {
+    return res.json({
+      sessionId,
       normalized,
-      conversation: { stateId: sessionId, turn: 1 },
-    };
-    validateOrThrow("NormalizeResponse", payload);
-
-    res.json(payload);
+    });
   } catch (err) {
-    console.error("normalize error:", err);
-    res.status(400).json({ error: String(err.message || err) });
+    console.error(err);
+    return res.status(400).json({ error: String(err?.message || err) });
   }
 });
 
-// ===== /api/chat — «живой» диалог =====
+// >>> Главное изменение: /api/chat сам создаёт сессию, если её нет <<<
 app.post("/api/chat", async (req, res) => {
   try {
-    const { sessionId, message } = req.body || {};
-    if (!sessionId || !sessions.has(sessionId)) {
-      return res
-        .status(400)
-        .json({ error: "Unknown sessionId. Call /api/normalize first." });
+    const { sessionId, message, subject, grade, style, level } = req.body || {};
+
+    // Получаем существующую сессию (если есть)
+    let sid = sessionId;
+    let s = sid && sessions.get(sid);
+
+    // Если сессии нет — создаём её на лету из присланных полей или дефолтов
+    if (!s) {
+      sid = ensureSessionId(sid);
+      const subj = subject || "general";
+      const grd = Number.isFinite(+grade) ? +grade : 9;
+      const stl = style || "step_by_step";
+      const lvl = level || "standard";
+
+      s = {
+        subject: subj,
+        grade: grd,
+        style: stl,
+        level: lvl,
+        normalized: {
+          topic: String(message || ""), // В качестве темы берём первое сообщение пользователя
+          goals: [],
+          constraints: [],
+          context_stub: "",
+        },
+        history: [],
+        turn: 0,
+        mastery: 0,
+      };
+      sessions.set(sid, s);
     }
 
-    const s = sessions.get(sessionId);
-    const userMsg = String(message || "");
+    // Базовая валидация тела /api/chat (если у вас есть схема — можно включить здесь)
+    if (!message || typeof message !== "string") {
+      return res.status(400).json({ error: "Field `message` is required" });
+    }
 
-    // пишем пользователя в историю
-    s.history.push({ role: "user", content: userMsg });
+    // Выполняем один ход диалога
+    const result = await chatTurn({
+      session: s,
+      message,
+    });
 
-    // ход диалога через модель
-    const { assistant } = await dialogTurn({ session: s, userMessage: userMsg });
+    // Обновляем внутреннее состояние (если chatTurn вернул обновления)
+    if (result?._sessionPatch) {
+      Object.assign(s, result._sessionPatch);
+    }
+    s.turn = (s.turn || 0) + 1;
 
-    // обновляем состояние
-    s.history.push({ role: "assistant", content: assistant.message });
-    s.turn = (s.turn || 1) + 1;
-    s.mastery = assistant?.tutor_state?.mastery ?? s.mastery;
-
-    const payload = {
-      assistant,
-      conversation: { stateId: sessionId, turn: s.turn },
-    };
-    // при желании включай строгую проверку:
-    // validateOrThrow("ChatResponse", payload);
-
-    res.json(payload);
+    // Отправляем ответ клиенту
+    return res.json({
+      assistant: result.assistant || {
+        message: "Пустой ответ",
+        examples: [],
+        checks: [],
+        homework: [],
+        citations: [],
+        tutor_state: { mastery: s.mastery || 0, next_step: "" },
+      },
+      conversation: {
+        stateId: sid,
+        turn: s.turn,
+      },
+    });
   } catch (err) {
-    console.error("chat error:", err);
-    res.status(400).json({ error: String(err.message || err) });
+    console.error(err);
+    return res.status(500).json({ error: String(err?.message || err) });
   }
 });
 
-// ===== SPA fallback =====
+// SPA fallback
 app.get("*", (_req, res) => {
-  res.sendFile(path.join(__dirname, "..", "public", "index.html"));
+  res.sendFile(path.join(publicDir, "index.html"));
 });
 
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`API listening on :${PORT}`));
+const PORT = Number(process.env.PORT || 10000);
+app.listen(PORT, () => {
+  console.log(`Server listening on http://localhost:${PORT}`);
+});
 
-export { sessions };
