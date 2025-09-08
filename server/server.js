@@ -9,7 +9,10 @@ dotenv.config();
 
 import { validateOrThrow } from "./shared/validator.js";
 import { ensureSessionId } from "./shared/utils.js";
-import { chatTurn } from "./logic/dialog.js";
+// ВАЖНО: dialog.js должен экспортировать default-функцию.
+//   Пример в dialog.js:
+//     export default async function dialogTurn({ session, message }) { ... }
+import dialogTurn from "./logic/dialog.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,15 +30,15 @@ app.use(express.static(publicDir));
 
 // ====== API ======
 
-// Нормализацию оставляем как была (если фронт когда-то её вызовет).
-// Но для варианта А она не используется.
+// /api/normalize остаётся «дружелюбной» заглушкой — для совместимости.
+// В варианте A фронт её не вызывает, но пусть работает.
 app.post("/api/normalize", async (req, res) => {
   try {
     validateOrThrow("TutorInput", req.body);
     const { subject, grade, style, level = "standard", query } = req.body;
 
     const sessionId = ensureSessionId(req.body.sessionId);
-    // Минимальная инициализация, чтобы совместимо жить с вариантом A:
+
     const normalized = {
       topic: String(query || ""),
       goals: [],
@@ -43,7 +46,6 @@ app.post("/api/normalize", async (req, res) => {
       context_stub: "",
     };
 
-    // Создаём/обновляем сессию
     sessions.set(sessionId, {
       subject: subject || "general",
       grade: Number.isFinite(+grade) ? +grade : 9,
@@ -55,26 +57,28 @@ app.post("/api/normalize", async (req, res) => {
       mastery: 0,
     });
 
-    return res.json({
-      sessionId,
-      normalized,
-    });
+    return res.json({ sessionId, normalized });
   } catch (err) {
     console.error(err);
     return res.status(400).json({ error: String(err?.message || err) });
   }
 });
 
-// >>> Главное изменение: /api/chat сам создаёт сессию, если её нет <<<
+// >>> Ключевое: /api/chat сам создаёт сессию, если её нет
 app.post("/api/chat", async (req, res) => {
   try {
     const { sessionId, message, subject, grade, style, level } = req.body || {};
 
-    // Получаем существующую сессию (если есть)
+    // Базовая проверка входа
+    if (!message || typeof message !== "string") {
+      return res.status(400).json({ error: "Field `message` is required" });
+    }
+
+    // Пытаемся взять существующую сессию
     let sid = sessionId;
     let s = sid && sessions.get(sid);
 
-    // Если сессии нет — создаём её на лету из присланных полей или дефолтов
+    // Если нет — создаём на лету из присланных полей или дефолтов
     if (!s) {
       sid = ensureSessionId(sid);
       const subj = subject || "general";
@@ -88,7 +92,8 @@ app.post("/api/chat", async (req, res) => {
         style: stl,
         level: lvl,
         normalized: {
-          topic: String(message || ""), // В качестве темы берём первое сообщение пользователя
+          // Первое пользовательское сообщение используем как тему
+          topic: String(message || ""),
           goals: [],
           constraints: [],
           context_stub: "",
@@ -100,24 +105,14 @@ app.post("/api/chat", async (req, res) => {
       sessions.set(sid, s);
     }
 
-    // Базовая валидация тела /api/chat (если у вас есть схема — можно включить здесь)
-    if (!message || typeof message !== "string") {
-      return res.status(400).json({ error: "Field `message` is required" });
-    }
-
     // Выполняем один ход диалога
-    const result = await chatTurn({
-      session: s,
-      message,
-    });
+    const result = await dialogTurn({ session: s, message });
 
-    // Обновляем внутреннее состояние (если chatTurn вернул обновления)
-    if (result?._sessionPatch) {
-      Object.assign(s, result._sessionPatch);
-    }
+    // Обновляем состояние (если модуль вернул патч)
+    if (result?._sessionPatch) Object.assign(s, result._sessionPatch);
     s.turn = (s.turn || 0) + 1;
 
-    // Отправляем ответ клиенту
+    // Ответ клиенту
     return res.json({
       assistant: result.assistant || {
         message: "Пустой ответ",
@@ -147,4 +142,3 @@ const PORT = Number(process.env.PORT || 10000);
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
 });
-
