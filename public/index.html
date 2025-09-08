@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>School Tutor — MVP</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css" />
+
+  <!-- MathJax для формул -->
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [["$","$"],["\\(","\\)"]], displayMath: [["$$","$$"],["\\[","\\]"]] },
+      options: { skipHtmlTags: { '[-]': ['script','noscript','style','textarea','pre','code'] } },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+  <!-- marked.js для рендера Markdown -->
+  <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <h1>🎓 School Tutor</h1>
+      <form id="controls" class="controls">
+        <label>
+          Предмет
+          <select id="subject">
+            <option value="biology">Биология</option>
+            <option value="math">Математика</option>
+            <option value="physics">Физика</option>
+            <option value="chemistry">Химия</option>
+            <option value="history">История</option>
+            <option value="literature">Литература</option>
+            <option value="geography">География</option>
+            <option value="informatics">Информатика</option>
+          </select>
+        </label>
+        <label>
+          Класс
+          <input id="grade" type="number" min="1" max="11" value="9" />
+        </label>
+        <label>
+          Стиль объяснений
+          <select id="style">
+            <option value="step_by_step">Пошагово</option>
+            <option value="friendly">Дружелюбно</option>
+            <option value="socratic">Сократический</option>
+            <option value="concise">Кратко</option>
+          </select>
+        </label>
+        <label>
+          Уровень
+          <select id="level">
+            <option value="standard">Стандарт</option>
+            <option value="basic">Базовый</option>
+            <option value="olympiad">Олимпиадный</option>
+          </select>
+        </label>
+        <div class="progress">
+          <div class="progress__label">Прогресс понимания</div>
+          <div class="progress__bar"><div id="masteryBar" style="width:0%"></div></div>
+          <div id="nextStep" class="progress__hint"></div>
+        </div>
+      </form>
+      <div class="tips">
+        Подсказка: попробуй «Структура ядра клетки» или «Квадратные уравнения».
+      </div>
+    </aside>
+
+    <main class="main" id="main">
+      <header class="topbar">
+        <button id="toggleSidebar" class="icon-btn" aria-label="Открыть меню">☰</button>
+        <div class="topbar__title">School Tutor</div>
+      </header>
+
+      <div id="chat" class="chat" role="log" aria-live="polite"></div>
+
+      <div class="composer">
+        <textarea id="input" rows="2" placeholder="Сформулируй тему или задай вопрос… (Shift+Enter — новая строка)" enterkeyhint="send"></textarea>
+        <button id="send">Отправить</button>
+      </div>
+    </main>
+  </div>
+
+  <div id="overlay" class="overlay" hidden></div>
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="./script.js" type="module"></script>
+</body>
+</html>

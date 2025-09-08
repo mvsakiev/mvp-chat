@@ -1,0 +1,15 @@
+{
+  "subject": "mathematics",
+  "topics": [
+    {
+      "id": "pythagoras_theorem",
+      "name": "Теорема Пифагора",
+      "synonyms": ["Пифагор", "катеты и гипотенуза", "a^2+b^2=c^2"]
+    },
+    {
+      "id": "quadratic_equations",
+      "name": "Квадратные уравнения",
+      "synonyms": ["квадратное уравнение", "дискриминант", "формула корней"]
+    }
+  ]
+}

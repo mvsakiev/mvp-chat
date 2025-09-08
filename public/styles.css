@@ -1,0 +1,108 @@
+:root {
+  --bg: #0b1020;
+  --surface: #121932;
+  --surface-2: #151f3d;
+  --text: #e8edff;
+  --muted: #a9b1d6;
+  --accent: #6ea8fe;
+  --accent-2: #8bd1ff;
+  --ok: #27d980;
+  --err: #ff6b6b;
+  --border: #233054;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: var(--text);
+  background: radial-gradient(1200px 800px at 20% -10%, #23305433, transparent),
+              radial-gradient(1000px 600px at 100% 10%, #1a244244, transparent),
+              var(--bg);
+}
+
+.app { display: grid; grid-template-columns: 320px 1fr; height: 100dvh; gap: 0; }
+.sidebar { border-right: 1px solid var(--border); padding: 20px; backdrop-filter: saturate(140%) blur(2px); overflow-y: auto; }
+.sidebar h1 { margin: 0 0 16px; font-size: 22px; font-weight: 700; }
+.controls { display: grid; gap: 12px; }
+.controls label { display: grid; gap: 6px; font-size: 14px; color: var(--muted); }
+.controls select, .controls input[type=number] {
+  background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  padding: 12px 14px; border-radius: 12px; outline: none; min-height: 44px;
+}
+.controls select:focus, .controls input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px #6ea8fe33; }
+
+.progress { margin-top: 12px; display: grid; gap: 8px; }
+.progress__label { font-size: 12px; color: var(--muted); }
+.progress__bar { height: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+.progress__bar > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .4s ease; }
+.progress__hint { font-size: 12px; color: var(--muted); min-height: 14px; }
+
+.tips { margin-top: 16px; font-size: 12px; color: var(--muted); }
+
+.main { display: grid; grid-template-rows: auto 1fr auto; height: 100%; }
+.topbar { display: none; }
+.topbar .icon-btn { font-size: 22px; line-height: 1; }
+.topbar .topbar__title { font-weight: 700; margin-left: 8px; }
+
+.chat { padding: 16px 24px; overflow-y: auto; display: grid; gap: 16px; }
+.msg { display: grid; gap: 8px; max-width: 840px; }
+.msg.user { justify-self: end; }
+.msg.assistant { justify-self: start; }
+.bubble { padding: 14px 16px; border-radius: 16px; line-height: 1.55; border: 1px solid var(--border); white-space: pre-wrap; word-wrap: break-word; }
+.msg.user .bubble { background: #10192f; }
+.msg.assistant .bubble { background: var(--surface); }
+.msg .meta { font-size: 12px; color: var(--muted); }
+
+.bubble h1, .bubble h2, .bubble h3 { margin: .2em 0 .3em; }
+.bubble ul, .bubble ol { margin: .2em 0 .6em .8em; }
+.bubble pre { overflow:auto; padding:.6em .8em; border-radius:10px; background: var(--surface-2); }
+
+.composer { position: sticky; bottom: 0; padding: 12px 16px calc(12px + var(--safe-bottom)); border-top: 1px solid var(--border); background: linear-gradient(180deg, #0b1020dd, #0b1020f2); backdrop-filter: blur(6px); display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+.composer textarea {
+  resize: none; width: 100%; background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; outline: none; min-height: 44px; max-height: 40dvh;
+}
+.composer textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px #6ea8fe33; }
+.composer button { background: linear-gradient(180deg, var(--accent), var(--accent-2)); color: #0b1020; font-weight: 700; border: none; border-radius: 12px; padding: 0 18px; cursor: pointer; min-height: 44px; }
+.composer button:active { transform: translateY(1px); }
+
+.toast { position: fixed; bottom: calc(16px + var(--safe-bottom)); right: 16px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 12px; box-shadow: 0 6px 20px #0006; }
+
+/* ===== Встроенные тесты в сообщениях ===== */
+.inline-quiz { margin-top: 12px; border-top: 1px dashed var(--border); padding-top: 12px; }
+.inline-quiz .inline-quiz__header { display:flex; align-items:center; justify-content:space-between; gap: 10px; margin-bottom:8px; }
+.inline-quiz .inline-quiz__title { font-weight: 700; }
+.inline-quiz .inline-quiz__actions { display:flex; gap:8px; flex-wrap: wrap; }
+.inline-quiz .inline-quiz__btn { background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; cursor: pointer; min-height: 36px; }
+.inline-quiz .inline-quiz__result { margin-top: 8px; font-size: 13px; color: var(--muted); }
+
+.check { border: 1px solid var(--border); background: var(--surface-2); border-radius: 12px; padding: 12px; margin-top: 10px; }
+.check h3 { margin: 0 0 8px; font-size: 14px; }
+.check .options { display: grid; gap: 8px; }
+.check .short { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); min-height: 40px; }
+.check .feedback { margin-top: 8px; font-size: 13px; color: var(--muted); }
+.check .feedback strong { color: var(--text); }
+.correct { outline: 2px solid #27d98088; }
+.incorrect { outline: 2px solid #ff6b6b88; }
+
+/* Overlay для открытого меню на мобилке */
+.overlay { position: fixed; inset: 0; background: #0008; backdrop-filter: blur(2px); z-index: 9; }
+
+/* ===== Мобильная адаптация ===== */
+@media (max-width: 960px) {
+  .app { grid-template-columns: 1fr; }
+  .topbar { display: flex; align-items: center; gap: 10px; padding: calc(10px + var(--safe-top)) 12px 10px; border-bottom: 1px solid var(--border); background: linear-gradient(180deg, #0b1020f2, #0b1020e0); position: sticky; top: 0; z-index: 8; }
+  .icon-btn { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; }
+
+  .sidebar { position: fixed; z-index: 10; top: 0; left: 0; height: 100dvh; width: min(86vw, 360px); transform: translateX(-100%); transition: transform .3s ease; background: linear-gradient(180deg, #0b1020, #0b1020); padding-top: calc(16px + var(--safe-top)); }
+  .sidebar.open { transform: translateX(0); }
+  #overlay[hidden] { display: none; }
+
+  .chat { padding: 12px; }
+  .bubble { font-size: 15px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}

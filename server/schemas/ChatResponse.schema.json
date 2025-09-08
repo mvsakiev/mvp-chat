@@ -1,0 +1,53 @@
+{
+  "$id": "ChatResponse.schema.json",
+  "type": "object",
+  "required": ["assistant","conversation"],
+  "additionalProperties": false,
+  "properties": {
+    "assistant": {
+      "type": "object",
+      "required": ["message","examples","checks","homework","citations","tutor_state"],
+      "additionalProperties": false,
+      "properties": {
+        "message": { "type": "string" },
+        "examples": { "type": "array", "items": { "type": "string" } },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type","question","answer"],
+            "additionalProperties": false,
+            "properties": {
+              "type": { "type": "string", "enum": ["mcq","short"] },
+              "question": { "type": "string" },
+              "options": { "type": "array", "items": { "type": "string" } },
+              "answer": { "type": "string" },
+              "hint": { "type": "string" },
+              "explanation": { "type": "string" }
+            }
+          }
+        },
+        "homework": { "type": "array", "items": { "type": "string" } },
+        "citations": { "type": "array", "items": { "type": "string" } },
+        "tutor_state": {
+          "type": "object",
+          "required": ["mastery","next_step"],
+          "additionalProperties": false,
+          "properties": {
+            "mastery": { "type": "number", "minimum": 0, "maximum": 1 },
+            "next_step": { "type": "string" }
+          }
+        }
+      }
+    },
+    "conversation": {
+      "type": "object",
+      "required": ["stateId","turn"],
+      "additionalProperties": false,
+      "properties": {
+        "stateId": { "type": "string" },
+        "turn": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

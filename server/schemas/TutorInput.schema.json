@@ -1,0 +1,14 @@
+{
+  "$id": "TutorInput.schema.json",
+  "type": "object",
+  "required": ["subject", "grade", "style", "query"],
+  "additionalProperties": false,
+  "properties": {
+    "subject": { "type": "string", "enum": ["math","physics","chemistry","biology","history","literature","geography","informatics"] },
+    "grade": { "type": "integer", "minimum": 1, "maximum": 11 },
+    "style": { "type": "string", "enum": ["concise","friendly","step_by_step","socratic"] },
+    "level": { "type": "string", "enum": ["basic","standard","olympiad"], "default": "standard" },
+    "query": { "type": "string", "minLength": 1 },
+    "sessionId": { "type": "string", "minLength": 6 }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "$id": "NormalizeResponse.schema.json",
+  "type": "object",
+  "required": ["normalized","conversation"],
+  "additionalProperties": false,
+  "properties": {
+    "normalized": {
+      "type": "object",
+      "required": ["topic","goals","constraints","context_stub"],
+      "additionalProperties": false,
+      "properties": {
+        "topic": { "type": "string" },
+        "goals": { "type": "array", "items": { "type": "string" } },
+        "constraints": { "type": "array", "items": { "type": "string" } },
+        "context_stub": { "type": "string" }
+      }
+    },
+    "conversation": {
+      "type": "object",
+      "required": ["stateId","turn"],
+      "additionalProperties": false,
+      "properties": {
+        "stateId": { "type": "string" },
+        "turn": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

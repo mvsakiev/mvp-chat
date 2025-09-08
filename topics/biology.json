@@ -1,0 +1,10 @@
+{
+  "subject": "biology",
+  "topics": [
+    {
+      "id": "cell_nucleus",
+      "name": "Ядро клетки",
+      "synonyms": ["структура ядра", "ядрышко", "хроматин"]
+    }
+  ]
+}
